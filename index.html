@@ -207,8 +207,8 @@
       </div>
       <div class="row">
         <label>Amplitude</label>
-        <input type="range" data-control="amp" min="0" max="1" step="0.01" value="0.7" />
-        <span class="val" data-readout="amp">0.70</span>
+        <input type="range" data-control="amp" min="0" max="1" step="0.01" value="1" />
+        <span class="val" data-readout="amp">1.00</span>
       </div>
       <div class="row">
         <label>Frequency</label>
@@ -226,8 +226,8 @@
       </div>
       <div class="row">
         <label>Amplitude</label>
-        <input type="range" data-control="amp" min="0" max="1" step="0.01" value="0.7" />
-        <span class="val" data-readout="amp">0.70</span>
+        <input type="range" data-control="amp" min="0" max="1" step="0.01" value="1" />
+        <span class="val" data-readout="amp">1.00</span>
       </div>
       <div class="row">
         <label>Frequency</label>
@@ -284,8 +284,8 @@
   const TWO_PI = Math.PI * 2;
 
   const state = {
-    w1: { shape: 'sine', amp: 0.7, freq: 2 },
-    w2: { shape: 'triangle', amp: 0.7, freq: 2 },
+    w1: { shape: 'sine', amp: 1, freq: 2 },
+    w2: { shape: 'triangle', amp: 1, freq: 2 },
     offset: 0,         // phase shift of Wave 2, in wavelengths (1.0 = one full period)
     autoSlide: false,
     // markers per canvas: { c1: [{x: 0..1}], c2: [...], csum: [...] }
@@ -336,38 +336,65 @@
     return { w: rect.width, h: rect.height };
   }
 
-  function drawGrid(ctx, w, h) {
+  // Plot region inside a canvas, leaving room for axis labels.
+  function plotRect(w, h) {
+    const x0 = 38, x1 = w - 10, y0 = 12, y1 = h - 20;
+    return { x0, x1, y0, y1, midY: (y0 + y1) / 2, pw: x1 - x0, ph: y1 - y0 };
+  }
+
+  // The plot box represents ±(range * Y_HEADROOM) so peaks aren't flush with the edges.
+  const Y_HEADROOM = 1.12;
+  const displayRange = range => range * Y_HEADROOM;
+
+  function drawAxes(ctx, w, h, range) {
+    const { x0, x1, y0, y1, midY } = plotRect(w, h);
+    const halfH = (y1 - y0) / 2;
+    const dRange = displayRange(range);
+
     ctx.fillStyle = '#0b0e13';
     ctx.fillRect(0, 0, w, h);
 
-    ctx.strokeStyle = 'var(--grid)';
-    ctx.strokeStyle = '#232a35';
-    ctx.lineWidth = 1;
-
-    // horizontal mid line
-    ctx.beginPath();
-    ctx.moveTo(0, h / 2);
-    ctx.lineTo(w, h / 2);
-    ctx.stroke();
-
-    // light gridlines
+    // light gridlines inside the plot region
     ctx.strokeStyle = '#1a212c';
-    const cols = 16;
-    for (let i = 1; i < cols; i++) {
-      const x = (w * i) / cols;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, h);
-      ctx.stroke();
+    ctx.lineWidth = 1;
+    for (const fx of [0.25, 0.5, 0.75]) {
+      const px = x0 + fx * (x1 - x0);
+      ctx.beginPath(); ctx.moveTo(px, y0); ctx.lineTo(px, y1); ctx.stroke();
     }
-    const rows = 4;
-    for (let i = 1; i < rows; i++) {
-      if (i === rows / 2) continue;
-      const y = (h * i) / rows;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
+    // half-range gridlines, scaled into the headroom-aware plot
+    for (const v of [range / 2, -range / 2]) {
+      const py = midY - (v / dRange) * halfH;
+      ctx.beginPath(); ctx.moveTo(x0, py); ctx.lineTo(x1, py); ctx.stroke();
+    }
+
+    // prominent axes
+    ctx.strokeStyle = '#3a4252';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0, y1); ctx.stroke();   // y-axis
+    ctx.beginPath(); ctx.moveTo(x0, midY); ctx.lineTo(x1, midY); ctx.stroke(); // x-axis
+
+    // axis tick labels — at the actual data values, positioned via dRange
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+
+    const fmt = v => (v > 0 ? `+${v}` : `${v}`);
+    const yTicks = range >= 2 ? [range, range / 2, 0, -range / 2, -range] : [range, 0, -range];
+    for (const v of yTicks) {
+      const py = midY - (v / dRange) * halfH;
+      ctx.strokeStyle = '#3a4252';
+      ctx.beginPath(); ctx.moveTo(x0 - 3, py); ctx.lineTo(x0, py); ctx.stroke();
+      ctx.fillText(fmt(v), x0 - 6, py);
+    }
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (const fx of [0, 0.5, 1]) {
+      const px = x0 + fx * (x1 - x0);
+      ctx.strokeStyle = '#3a4252';
+      ctx.beginPath(); ctx.moveTo(px, y1); ctx.lineTo(px, y1 + 3); ctx.stroke();
+      ctx.fillText(fx.toFixed(1), px, y1 + 5);
     }
   }
 
@@ -408,36 +435,50 @@
   }
 
   function drawSimpleTrace(ctx, w, h, sampler, color, range) {
-    // range: max absolute value used to normalize y
+    const { x0, y0, midY, pw, ph } = plotRect(w, h);
+    const halfH = ph / 2;
+    const dRange = displayRange(range);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x0, y0, pw, ph);
+    ctx.clip();
+
     ctx.lineWidth = 2;
     ctx.strokeStyle = color;
     ctx.beginPath();
-    const samples = Math.max(400, Math.floor(w * 2));
+    const samples = Math.max(400, Math.floor(pw * 2));
     for (let i = 0; i <= samples; i++) {
-      const x = i / samples;
-      const v = sampler(x);
-      const yNorm = Math.max(-1.05, Math.min(1.05, v / range));
-      const px = x * w;
-      const py = h / 2 - yNorm * (h / 2 - 6);
+      const fx = i / samples;
+      const v = sampler(fx);
+      const yNorm = v / dRange;
+      const px = x0 + fx * pw;
+      const py = midY - yNorm * halfH;
       if (i === 0) ctx.moveTo(px, py);
       else ctx.lineTo(px, py);
     }
     ctx.stroke();
+    ctx.restore();
   }
 
   function drawMarkers(ctx, w, h, markers, sampler, range, color) {
+    const { x0, x1, y0, y1, midY, pw, ph } = plotRect(w, h);
+    const halfH = ph / 2;
+    const dRange = displayRange(range);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
     for (const m of markers) {
       const v = sampler(m.x);
-      const yNorm = Math.max(-1.05, Math.min(1.05, v / range));
-      const px = m.x * w;
-      const py = h / 2 - yNorm * (h / 2 - 6);
+      const yNorm = Math.max(-1, Math.min(1, v / dRange));
+      const px = x0 + m.x * pw;
+      const py = midY - yNorm * halfH;
 
       // vertical guide
-      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(px, 0);
-      ctx.lineTo(px, h);
+      ctx.moveTo(px, y0);
+      ctx.lineTo(px, y1);
       ctx.stroke();
 
       // dot
@@ -456,8 +497,8 @@
       const padX = 6, padY = 4;
       let lx = px + 9;
       let ly = py - 10 - padY * 2 - 6;
-      if (lx + tw + padX * 2 > w - 4) lx = px - 9 - tw - padX * 2;
-      if (ly < 2) ly = py + 12;
+      if (lx + tw + padX * 2 > x1 - 2) lx = px - 9 - tw - padX * 2;
+      if (ly < y0 + 2) ly = py + 12;
       ctx.fillStyle = 'rgba(14,17,22,0.9)';
       ctx.strokeStyle = color;
       ctx.lineWidth = 1;
@@ -477,10 +518,10 @@
       sum: 'rgb(255,209,102)',
     };
 
-    // wave 1 (no shift)
+    // wave 1 (no shift) — y range is [-1, +1]
     {
       const { w, h } = resizeCanvas(canvases.c1);
-      drawGrid(ctxs.c1, w, h);
+      drawAxes(ctxs.c1, w, h, 1);
       const sampler = x => sampleWave(state.w1, x, 0);
       drawSimpleTrace(ctxs.c1, w, h, sampler, colors.w1, 1);
       drawMarkers(ctxs.c1, w, h, state.markers.c1, sampler, 1, colors.w1);
@@ -491,16 +532,16 @@
     const w2PhaseShift = -state.offset;
     {
       const { w, h } = resizeCanvas(canvases.c2);
-      drawGrid(ctxs.c2, w, h);
+      drawAxes(ctxs.c2, w, h, 1);
       const sampler = x => sampleWave(state.w2, x, w2PhaseShift);
       drawSimpleTrace(ctxs.c2, w, h, sampler, colors.w2, 1);
       drawMarkers(ctxs.c2, w, h, state.markers.c2, sampler, 1, colors.w2);
     }
 
-    // sum
+    // sum — fixed y range of [-2, +2] since each source caps at ±1
     {
       const { w, h } = resizeCanvas(canvases.csum);
-      drawGrid(ctxs.csum, w, h);
+      drawAxes(ctxs.csum, w, h, 2);
 
       // ghost the originals lightly behind
       ctxs.csum.globalAlpha = 0.25;
@@ -510,28 +551,79 @@
 
       const sampler = x =>
         sampleWave(state.w1, x, 0) + sampleWave(state.w2, x, w2PhaseShift);
-      // Sum range is up to amp1 + amp2 (≤ 2). Normalize against that for fit.
-      const range = Math.max(0.001, state.w1.amp + state.w2.amp);
-      drawSimpleTrace(ctxs.csum, w, h, sampler, colors.sum, range);
-      drawMarkers(ctxs.csum, w, h, state.markers.csum, sampler, range, colors.sum);
+      drawSimpleTrace(ctxs.csum, w, h, sampler, colors.sum, 2);
+      drawMarkers(ctxs.csum, w, h, state.markers.csum, sampler, 2, colors.sum);
     }
   }
 
-  // --- marker click handling ---
-  function setupMarkerClicks(canvasId) {
+  // --- marker click & drag handling ---
+  // - mousedown on existing marker (dot or vertical line): start dragging it
+  // - mousedown on empty area: place a new marker and start dragging it immediately
+  // - right-click on a marker: remove it
+  // Hit test threshold is in canvas-fraction units (~1.5% of width).
+  const HIT = 0.015;
+
+  function pointerX(canvas, e) {
+    const rect = canvas.getBoundingClientRect();
+    const { x0, pw } = plotRect(rect.width, rect.height);
+    return Math.max(0, Math.min(1, (e.clientX - rect.left - x0) / pw));
+  }
+
+  function setupMarkerInteraction(canvasId) {
     const canvas = canvases[canvasId];
-    canvas.addEventListener('click', e => {
-      const rect = canvas.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
-      const list = state.markers[canvasId];
-      // remove if clicking near an existing marker (within ~1.5% of width)
-      const hitIdx = list.findIndex(m => Math.abs(m.x - x) < 0.015);
-      if (hitIdx >= 0) list.splice(hitIdx, 1);
-      else list.push({ x: Math.max(0, Math.min(1, x)) });
+    const list = state.markers[canvasId];
+    let dragIdx = -1;
+
+    canvas.addEventListener('contextmenu', e => {
+      const x = pointerX(canvas, e);
+      const idx = list.findIndex(m => Math.abs(m.x - x) < HIT);
+      if (idx >= 0) {
+        e.preventDefault();
+        list.splice(idx, 1);
+        render();
+      }
+    });
+
+    canvas.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return; // left-click only
+      const x = pointerX(canvas, e);
+      let idx = list.findIndex(m => Math.abs(m.x - x) < HIT);
+      if (idx < 0) {
+        list.push({ x });
+        idx = list.length - 1;
+      }
+      dragIdx = idx;
+      canvas.setPointerCapture(e.pointerId);
+      canvas.style.cursor = 'ew-resize';
       render();
     });
+
+    canvas.addEventListener('pointermove', e => {
+      if (dragIdx >= 0) {
+        list[dragIdx].x = pointerX(canvas, e);
+        render();
+        return;
+      }
+      // hover affordance: show ew-resize cursor when over a marker
+      const x = pointerX(canvas, e);
+      const overMarker = list.some(m => Math.abs(m.x - x) < HIT);
+      canvas.style.cursor = overMarker ? 'ew-resize' : 'crosshair';
+    });
+
+    function endDrag(e) {
+      if (dragIdx < 0) return;
+      dragIdx = -1;
+      try { canvas.releasePointerCapture(e.pointerId); } catch {}
+      const x = pointerX(canvas, e);
+      const overMarker = list.some(m => Math.abs(m.x - x) < HIT);
+      canvas.style.cursor = overMarker ? 'ew-resize' : 'crosshair';
+    }
+    canvas.addEventListener('pointerup', endDrag);
+    canvas.addEventListener('pointercancel', endDrag);
+
+    canvas.style.cursor = 'crosshair';
   }
-  ['c1', 'c2', 'csum'].forEach(setupMarkerClicks);
+  ['c1', 'c2', 'csum'].forEach(setupMarkerInteraction);
 
   document.querySelectorAll('.offset-quick').forEach(btn => {
     btn.addEventListener('click', () => {
