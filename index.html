@@ -44,18 +44,28 @@
     grid-template-columns: 320px 1fr;
     gap: 16px;
     padding: 16px 28px 28px;
-    align-items: start;
+    align-items: stretch;
   }
   .controls {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
   }
+  /* Push the last control card (Markers) to the bottom so it lines up with
+     the bottom of the Sum canvas-wrap. The card before it (Slide) sits at
+     its natural position, lining up with the top of the Sum canvas-wrap. */
+  .controls > .card:last-child { margin-top: auto; }
   .card {
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 14px 16px;
+  }
+  /* Match wave control cards to the height of their corresponding canvas wrap.
+     canvas-wrap is content-box: 160 (canvas) + ~22 (header) + 24 (padding) + 2 (border) ≈ 208px. */
+  .card.wave-1, .card.wave-2 {
+    min-height: 208px;
+    box-sizing: border-box;
   }
   .card h2 {
     margin: 0 0 10px;
