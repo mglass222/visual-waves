@@ -243,7 +243,13 @@
         <input type="range" id="offset" min="-1" max="1" step="0.001" value="0" />
         <span class="val" id="offset-readout">0.00</span>
       </div>
-      <div class="footer-controls" style="margin-top:6px">
+      <div class="shape-group" style="grid-template-columns: repeat(4, 1fr); margin-top:4px">
+        <button class="offset-quick" data-offset="0">0</button>
+        <button class="offset-quick" data-offset="0.25">¼</button>
+        <button class="offset-quick" data-offset="0.5">½</button>
+        <button class="offset-quick" data-offset="0.75">¾</button>
+      </div>
+      <div class="footer-controls" style="margin-top:8px">
         <button id="auto-slide" class="toggle">Auto-slide</button>
         <button id="reset" class="toggle">Reset</button>
       </div>
@@ -526,6 +532,18 @@
     });
   }
   ['c1', 'c2', 'csum'].forEach(setupMarkerClicks);
+
+  document.querySelectorAll('.offset-quick').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const v = parseFloat(btn.dataset.offset);
+      state.offset = v;
+      offsetInput.value = v.toString();
+      offsetReadout.textContent = v.toFixed(2);
+      state.autoSlide = false;
+      autoBtn.classList.remove('on');
+      render();
+    });
+  });
 
   document.getElementById('clear-markers').addEventListener('click', () => {
     state.markers.c1.length = 0;
