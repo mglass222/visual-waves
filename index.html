@@ -239,15 +239,15 @@
     <div class="card">
       <h2>Slide</h2>
       <div class="row">
-        <label>Offset</label>
+        <label>Offset (λ)</label>
         <input type="range" id="offset" min="-1" max="1" step="0.001" value="0" />
         <span class="val" id="offset-readout">0.00</span>
       </div>
       <div class="shape-group" style="grid-template-columns: repeat(4, 1fr); margin-top:4px">
         <button class="offset-quick" data-offset="0">0</button>
-        <button class="offset-quick" data-offset="0.25">¼</button>
-        <button class="offset-quick" data-offset="0.5">½</button>
-        <button class="offset-quick" data-offset="0.75">¾</button>
+        <button class="offset-quick" data-offset="0.25">¼ λ</button>
+        <button class="offset-quick" data-offset="0.5">½ λ</button>
+        <button class="offset-quick" data-offset="0.75">¾ λ</button>
       </div>
       <div class="footer-controls" style="margin-top:8px">
         <button id="auto-slide" class="toggle">Auto-slide</button>
@@ -286,7 +286,7 @@
   const state = {
     w1: { shape: 'sine', amp: 0.7, freq: 2 },
     w2: { shape: 'triangle', amp: 0.7, freq: 2 },
-    offset: 0,         // -1..1, fraction of canvas width
+    offset: 0,         // phase shift of Wave 2, in wavelengths (1.0 = one full period)
     autoSlide: false,
     // markers per canvas: { c1: [{x: 0..1}], c2: [...], csum: [...] }
     markers: { c1: [], c2: [], csum: [] },
@@ -486,9 +486,9 @@
       drawMarkers(ctxs.c1, w, h, state.markers.c1, sampler, 1, colors.w1);
     }
 
-    // wave 2 — shifted. Convert offset (fraction of canvas) into phase shift in cycles.
-    // Shifting in x means x' = x - offset; phaseShift in cycles = -offset * freq.
-    const w2PhaseShift = -state.offset * state.w2.freq;
+    // wave 2 — shifted. state.offset is in wavelengths of Wave 2 (1.0 = full period).
+    // Phase shift in cycles is -offset so positive offset slides the wave to the right.
+    const w2PhaseShift = -state.offset;
     {
       const { w, h } = resizeCanvas(canvases.c2);
       drawGrid(ctxs.c2, w, h);

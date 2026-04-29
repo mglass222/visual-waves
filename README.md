@@ -8,8 +8,8 @@ An interactive web app for visualizing the **superposition of two waves**. Pick 
 
 - Two independent waves, each configurable as **sine, triangle, or square**
 - Adjustable **amplitude** and **frequency** per wave
-- **Slide offset** to phase-shift Wave 2 horizontally past Wave 1
-- **Quick offset buttons** for common phase shifts: `0`, `¼`, `½`, `¾`
+- **Slide offset** measured in wavelengths (λ) of Wave 2 — period is defined crest-to-crest
+- **Quick offset buttons** for common phase shifts: `0`, `¼ λ`, `½ λ`, `¾ λ`
 - **Auto-slide** toggle for continuous animated motion
 - **Sum canvas** showing the superposition, with the two source waves ghosted behind for reference
 - **Click-to-place markers** on any canvas — each marker snaps to the wave and shows its `(x, y)` value live as you slide
@@ -36,7 +36,7 @@ python3 -m http.server 8000
 
 1. **Pick a shape** for each wave using the Sine / Triangle / Square buttons.
 2. **Adjust amplitude and frequency** with the sliders in each wave's panel.
-3. **Drag the Offset slider** (or click `0`, `¼`, `½`, `¾`) to slide Wave 2 past Wave 1 — the Sum canvas updates instantly.
+3. **Drag the Offset slider** (or click `0`, `¼ λ`, `½ λ`, `¾ λ`) to slide Wave 2 past Wave 1 in units of its own wavelength — the Sum canvas updates instantly. A `½ λ` shift of two equal sines produces full destructive interference.
 4. Click **Auto-slide** to animate the offset continuously; click again to stop.
 5. **Click on any canvas** to drop a marker that shows the wave's value at that point. Click an existing marker to remove it, or use **Clear all markers**.
 
