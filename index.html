@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Visual Waves — Superposition</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #161b22;
+    --panel-2: #1c232d;
+    --border: #2a313c;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent-1: #4cc9f0;
+    --accent-2: #f72585;
+    --accent-sum: #ffd166;
+    --grid: #232a35;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    min-height: 100vh;
+  }
+  header {
+    padding: 20px 28px 8px;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+  header p {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  main {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 16px;
+    padding: 16px 28px 28px;
+    align-items: start;
+  }
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .card h2 {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 80px 1fr 44px;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0;
+    font-size: 13px;
+  }
+  .row label { color: var(--muted); }
+  .row .val { color: var(--text); text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; }
+  .shape-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .shape-group button {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 0;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+  .shape-group button:hover { background: #232b36; }
+  .shape-group button.active {
+    border-color: var(--accent-1);
+    background: rgba(76,201,240,0.12);
+    color: var(--accent-1);
+  }
+  .card.wave-2 .shape-group button.active {
+    border-color: var(--accent-2);
+    background: rgba(247,37,133,0.12);
+    color: var(--accent-2);
+  }
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    background: transparent;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--text);
+    margin-top: -5px;
+    cursor: pointer;
+    border: 2px solid var(--panel);
+  }
+  .canvases {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .canvas-wrap {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .canvas-wrap header {
+    padding: 0 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .canvas-wrap h3 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: var(--muted);
+    display: flex; align-items: center; gap: 8px;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 160px;
+    border-radius: 6px;
+  }
+  .sum canvas { height: 200px; }
+  .footer-controls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .footer-controls .row {
+    margin: 0;
+    flex: 1 1 280px;
+  }
+  button.toggle {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  button.toggle.on {
+    border-color: var(--accent-sum);
+    color: var(--accent-sum);
+    background: rgba(255,209,102,0.1);
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Visual Waves</h1>
+  <p>Slide one wave past the other and watch their superposition.</p>
+</header>
+
+<main>
+  <div class="controls">
+    <div class="card wave-1" data-wave="1">
+      <h2><span class="swatch" style="background:var(--accent-1)"></span>Wave 1</h2>
+      <div class="shape-group" data-control="shape">
+        <button data-shape="sine" class="active">Sine</button>
+        <button data-shape="triangle">Triangle</button>
+        <button data-shape="square">Square</button>
+      </div>
+      <div class="row">
+        <label>Amplitude</label>
+        <input type="range" data-control="amp" min="0" max="1" step="0.01" value="0.7" />
+        <span class="val" data-readout="amp">0.70</span>
+      </div>
+      <div class="row">
+        <label>Frequency</label>
+        <input type="range" data-control="freq" min="0.5" max="6" step="0.1" value="2" />
+        <span class="val" data-readout="freq">2.0</span>
+      </div>
+    </div>
+
+    <div class="card wave-2" data-wave="2">
+      <h2><span class="swatch" style="background:var(--accent-2)"></span>Wave 2</h2>
+      <div class="shape-group" data-control="shape">
+        <button data-shape="sine">Sine</button>
+        <button data-shape="triangle" class="active">Triangle</button>
+        <button data-shape="square">Square</button>
+      </div>
+      <div class="row">
+        <label>Amplitude</label>
+        <input type="range" data-control="amp" min="0" max="1" step="0.01" value="0.7" />
+        <span class="val" data-readout="amp">0.70</span>
+      </div>
+      <div class="row">
+        <label>Frequency</label>
+        <input type="range" data-control="freq" min="0.5" max="6" step="0.1" value="2" />
+        <span class="val" data-readout="freq">2.0</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Slide</h2>
+      <div class="row">
+        <label>Offset</label>
+        <input type="range" id="offset" min="-1" max="1" step="0.001" value="0" />
+        <span class="val" id="offset-readout">0.00</span>
+      </div>
+      <div class="footer-controls" style="margin-top:6px">
+        <button id="auto-slide" class="toggle">Auto-slide</button>
+        <button id="reset" class="toggle">Reset</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Markers</h2>
+      <p style="margin:0 0 8px;color:var(--muted);font-size:12px;line-height:1.4">
+        Click any wave to drop a marker. Click an existing marker to remove it.
+      </p>
+      <button id="clear-markers" class="toggle" style="width:100%">Clear all markers</button>
+    </div>
+  </div>
+
+  <div class="canvases">
+    <div class="canvas-wrap">
+      <header><h3><span class="swatch" style="background:var(--accent-1)"></span>Wave 1</h3></header>
+      <canvas id="c1"></canvas>
+    </div>
+    <div class="canvas-wrap">
+      <header><h3><span class="swatch" style="background:var(--accent-2)"></span>Wave 2 (shifted)</h3></header>
+      <canvas id="c2"></canvas>
+    </div>
+    <div class="canvas-wrap sum">
+      <header><h3><span class="swatch" style="background:var(--accent-sum)"></span>Sum</h3></header>
+      <canvas id="csum"></canvas>
+    </div>
+  </div>
+</main>
+
+<script>
+  const TWO_PI = Math.PI * 2;
+
+  const state = {
+    w1: { shape: 'sine', amp: 0.7, freq: 2 },
+    w2: { shape: 'triangle', amp: 0.7, freq: 2 },
+    offset: 0,         // -1..1, fraction of canvas width
+    autoSlide: false,
+    // markers per canvas: { c1: [{x: 0..1}], c2: [...], csum: [...] }
+    markers: { c1: [], c2: [], csum: [] },
+  };
+
+  // --- wave shape functions, all in [-1, 1], period = 1 in t ---
+  function shapeFn(shape, t) {
+    // t is phase in cycles (1.0 = one full period)
+    const f = t - Math.floor(t); // fractional part [0,1)
+    switch (shape) {
+      case 'sine':
+        return Math.sin(TWO_PI * f);
+      case 'square':
+        return f < 0.5 ? 1 : -1;
+      case 'triangle':
+        // 0 -> 1 at .25, -> 0 at .5, -> -1 at .75, -> 0 at 1
+        if (f < 0.25) return 4 * f;
+        if (f < 0.75) return 2 - 4 * f;
+        return -4 + 4 * f;
+      default:
+        return 0;
+    }
+  }
+
+  function sampleWave(wave, x, phaseShift = 0) {
+    // x in [0,1] across canvas; freq = cycles across canvas
+    const t = x * wave.freq + phaseShift;
+    return wave.amp * shapeFn(wave.shape, t);
+  }
+
+  // --- canvas setup with HiDPI support ---
+  const canvases = {
+    c1: document.getElementById('c1'),
+    c2: document.getElementById('c2'),
+    csum: document.getElementById('csum'),
+  };
+  const ctxs = {};
+  for (const k in canvases) ctxs[k] = canvases[k].getContext('2d');
+
+  function resizeCanvas(canvas) {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { w: rect.width, h: rect.height };
+  }
+
+  function drawGrid(ctx, w, h) {
+    ctx.fillStyle = '#0b0e13';
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.strokeStyle = 'var(--grid)';
+    ctx.strokeStyle = '#232a35';
+    ctx.lineWidth = 1;
+
+    // horizontal mid line
+    ctx.beginPath();
+    ctx.moveTo(0, h / 2);
+    ctx.lineTo(w, h / 2);
+    ctx.stroke();
+
+    // light gridlines
+    ctx.strokeStyle = '#1a212c';
+    const cols = 16;
+    for (let i = 1; i < cols; i++) {
+      const x = (w * i) / cols;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+    const rows = 4;
+    for (let i = 1; i < rows; i++) {
+      if (i === rows / 2) continue;
+      const y = (h * i) / rows;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+  }
+
+  function drawTrace(ctx, w, h, sampler, color, fillAlpha = 0) {
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+
+    const samples = Math.max(400, Math.floor(w * 2));
+    for (let i = 0; i <= samples; i++) {
+      const x = i / samples;
+      const v = sampler(x);          // -someMax..+someMax
+      const yNorm = Math.max(-1.05, Math.min(1.05, v / 2)); // sum can reach 2; map [-2,2] -> [-1,1]
+      const px = x * w;
+      const py = h / 2 - yNorm * (h / 2 - 6);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    if (fillAlpha > 0) {
+      ctx.lineTo(w, h / 2);
+      ctx.lineTo(0, h / 2);
+      ctx.closePath();
+      ctx.fillStyle = color.replace(')', `, ${fillAlpha})`).replace('rgb', 'rgba');
+      ctx.fill();
+      ctx.beginPath();
+      // redraw stroke without fill path
+      for (let i = 0; i <= samples; i++) {
+        const x = i / samples;
+        const v = sampler(x);
+        const yNorm = Math.max(-1.05, Math.min(1.05, v / 2));
+        const px = x * w;
+        const py = h / 2 - yNorm * (h / 2 - 6);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+    }
+    ctx.stroke();
+  }
+
+  function drawSimpleTrace(ctx, w, h, sampler, color, range) {
+    // range: max absolute value used to normalize y
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    const samples = Math.max(400, Math.floor(w * 2));
+    for (let i = 0; i <= samples; i++) {
+      const x = i / samples;
+      const v = sampler(x);
+      const yNorm = Math.max(-1.05, Math.min(1.05, v / range));
+      const px = x * w;
+      const py = h / 2 - yNorm * (h / 2 - 6);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+
+  function drawMarkers(ctx, w, h, markers, sampler, range, color) {
+    for (const m of markers) {
+      const v = sampler(m.x);
+      const yNorm = Math.max(-1.05, Math.min(1.05, v / range));
+      const px = m.x * w;
+      const py = h / 2 - yNorm * (h / 2 - 6);
+
+      // vertical guide
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(px, 0);
+      ctx.lineTo(px, h);
+      ctx.stroke();
+
+      // dot
+      ctx.fillStyle = color;
+      ctx.strokeStyle = '#0e1116';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(px, py, 5.5, 0, TWO_PI);
+      ctx.fill();
+      ctx.stroke();
+
+      // label
+      const label = `x=${m.x.toFixed(2)}  y=${v.toFixed(2)}`;
+      ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
+      const tw = ctx.measureText(label).width;
+      const padX = 6, padY = 4;
+      let lx = px + 9;
+      let ly = py - 10 - padY * 2 - 6;
+      if (lx + tw + padX * 2 > w - 4) lx = px - 9 - tw - padX * 2;
+      if (ly < 2) ly = py + 12;
+      ctx.fillStyle = 'rgba(14,17,22,0.9)';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.rect(lx, ly, tw + padX * 2, 11 + padY * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#e6edf3';
+      ctx.fillText(label, lx + padX, ly + padY + 10);
+    }
+  }
+
+  function render() {
+    const colors = {
+      w1: 'rgb(76,201,240)',
+      w2: 'rgb(247,37,133)',
+      sum: 'rgb(255,209,102)',
+    };
+
+    // wave 1 (no shift)
+    {
+      const { w, h } = resizeCanvas(canvases.c1);
+      drawGrid(ctxs.c1, w, h);
+      const sampler = x => sampleWave(state.w1, x, 0);
+      drawSimpleTrace(ctxs.c1, w, h, sampler, colors.w1, 1);
+      drawMarkers(ctxs.c1, w, h, state.markers.c1, sampler, 1, colors.w1);
+    }
+
+    // wave 2 — shifted. Convert offset (fraction of canvas) into phase shift in cycles.
+    // Shifting in x means x' = x - offset; phaseShift in cycles = -offset * freq.
+    const w2PhaseShift = -state.offset * state.w2.freq;
+    {
+      const { w, h } = resizeCanvas(canvases.c2);
+      drawGrid(ctxs.c2, w, h);
+      const sampler = x => sampleWave(state.w2, x, w2PhaseShift);
+      drawSimpleTrace(ctxs.c2, w, h, sampler, colors.w2, 1);
+      drawMarkers(ctxs.c2, w, h, state.markers.c2, sampler, 1, colors.w2);
+    }
+
+    // sum
+    {
+      const { w, h } = resizeCanvas(canvases.csum);
+      drawGrid(ctxs.csum, w, h);
+
+      // ghost the originals lightly behind
+      ctxs.csum.globalAlpha = 0.25;
+      drawSimpleTrace(ctxs.csum, w, h, x => sampleWave(state.w1, x, 0), colors.w1, 2);
+      drawSimpleTrace(ctxs.csum, w, h, x => sampleWave(state.w2, x, w2PhaseShift), colors.w2, 2);
+      ctxs.csum.globalAlpha = 1;
+
+      const sampler = x =>
+        sampleWave(state.w1, x, 0) + sampleWave(state.w2, x, w2PhaseShift);
+      // Sum range is up to amp1 + amp2 (≤ 2). Normalize against that for fit.
+      const range = Math.max(0.001, state.w1.amp + state.w2.amp);
+      drawSimpleTrace(ctxs.csum, w, h, sampler, colors.sum, range);
+      drawMarkers(ctxs.csum, w, h, state.markers.csum, sampler, range, colors.sum);
+    }
+  }
+
+  // --- marker click handling ---
+  function setupMarkerClicks(canvasId) {
+    const canvas = canvases[canvasId];
+    canvas.addEventListener('click', e => {
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const list = state.markers[canvasId];
+      // remove if clicking near an existing marker (within ~1.5% of width)
+      const hitIdx = list.findIndex(m => Math.abs(m.x - x) < 0.015);
+      if (hitIdx >= 0) list.splice(hitIdx, 1);
+      else list.push({ x: Math.max(0, Math.min(1, x)) });
+      render();
+    });
+  }
+  ['c1', 'c2', 'csum'].forEach(setupMarkerClicks);
+
+  document.getElementById('clear-markers').addEventListener('click', () => {
+    state.markers.c1.length = 0;
+    state.markers.c2.length = 0;
+    state.markers.csum.length = 0;
+    render();
+  });
+
+  // --- wire up controls ---
+  function bindWavePanel(card, key) {
+    const shapeBtns = card.querySelectorAll('.shape-group button');
+    shapeBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        shapeBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state[key].shape = btn.dataset.shape;
+        render();
+      });
+    });
+
+    card.querySelectorAll('input[type="range"]').forEach(input => {
+      const ctrl = input.dataset.control; // amp | freq
+      const readout = card.querySelector(`[data-readout="${ctrl}"]`);
+      const update = () => {
+        const v = parseFloat(input.value);
+        state[key][ctrl] = v;
+        readout.textContent = ctrl === 'amp' ? v.toFixed(2) : v.toFixed(1);
+        render();
+      };
+      input.addEventListener('input', update);
+      update();
+    });
+  }
+
+  bindWavePanel(document.querySelector('.card.wave-1'), 'w1');
+  bindWavePanel(document.querySelector('.card.wave-2'), 'w2');
+
+  const offsetInput = document.getElementById('offset');
+  const offsetReadout = document.getElementById('offset-readout');
+  offsetInput.addEventListener('input', () => {
+    state.offset = parseFloat(offsetInput.value);
+    offsetReadout.textContent = state.offset.toFixed(2);
+    render();
+  });
+
+  const autoBtn = document.getElementById('auto-slide');
+  autoBtn.addEventListener('click', () => {
+    state.autoSlide = !state.autoSlide;
+    autoBtn.classList.toggle('on', state.autoSlide);
+  });
+
+  document.getElementById('reset').addEventListener('click', () => {
+    state.offset = 0;
+    offsetInput.value = '0';
+    offsetReadout.textContent = '0.00';
+    state.autoSlide = false;
+    autoBtn.classList.remove('on');
+    render();
+  });
+
+  // animation loop for auto-slide
+  let last = performance.now();
+  function tick(now) {
+    const dt = (now - last) / 1000;
+    last = now;
+    if (state.autoSlide) {
+      state.offset += dt * 0.25; // cycles per second across canvas
+      if (state.offset > 1) state.offset -= 2;
+      offsetInput.value = state.offset.toFixed(3);
+      offsetReadout.textContent = state.offset.toFixed(2);
+      render();
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  window.addEventListener('resize', render);
+  render();
+</script>
+</body>
+</html>
